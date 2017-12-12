@@ -4,8 +4,9 @@ const fs = require('fs')
 const tulingBot = require('./tuling')
 const debug = require('debug')('weixinbot')
 const cacheData = {}
-const { getChartData } = require('./feixiao-chart.js')
-const { checkDirective } = require('./bitcoin-map.js')
+const { crawler } = require('./feixiaohao-crawler.js')
+const { checkDirective, CHART_TYPE } = require('./directive-helper.js')
+const cheerio = require('cheerio')
 
 /*feixiao.then(es => {
   console.log('EventSource init success: ', es)
@@ -30,56 +31,62 @@ const { checkDirective } = require('./bitcoin-map.js')
   })
 })*/
 
-const bufferBlock = {} // 缓存上传图片逻辑
+// const bufferBlock = {} // 缓存上传图片逻辑
+
+async function directiveRes(content, msg, bot) {
+  const chartType = checkDirective(content)
+  if (chartType === CHART_TYPE.SUMMARY || chartType === CHART_TYPE.DETAIL) {
+    debug('capture image', content)
+    const filepath = await crawler(content, chartType).catch(err => { debug('get chart image err', err) })
+    debug('crawler done saved file at: ', filepath)
+    bot.uploadImg(filepath, msg.FromUserName)
+  } else if (chartType === CHART_TYPE.BASEINFO) {
+    const filepath = await crawler(content, chartType).catch(err => { debug('get snap shot err', err) })
+    debug('get snap shot success: ', filepath)
+
+    const htmlContent = fs.readFileSync(filepath)
+    $ = cheerio.load(htmlContent, {
+      decodeEntities: false
+    })
+    bot.sendText(msg.FromUserName, $('.art-box').text())
+    debug('baseinfo is ', $('.art-box').text())
+  } else if (chartType === CHART_TYPE.SUMMARY_TEXT) {
+    const filepath = await crawler(content, chartType).catch(err => { debug('get snap shot err', err) })
+    debug('get snap shot success: ', filepath)
+
+    const htmlContent = fs.readFileSync(filepath)
+    $ = cheerio.load(htmlContent, {
+      decodeEntities: false
+    })
+    bot.sendText(msg.FromUserName, $('.price1').text().replace(/\s+/g, '\n'))
+    debug('price test is ', $('.price1').text())
+  } else {
+    throw 'invalid directive'
+    debug('invalid directive')
+  }
+}
 
 module.exports = function(bot) {
   bot.on('friend', async msg => {
-    // const path = getTimeUnit(msg.Content)
-    const chartType = checkDirective(msg.Content)
-    if (chartType) {
-      const now = new Date()
-      debug('bufferBlock', bufferBlock)
-      if (!bufferBlock[msg.Content] || now - bufferBlock[msg.Content] > 600000 || !fs.existsSync(`${__dirname}/tmp/${msg.Content}.png`)) {
-        debug('生成图表中...')
-        await getChartData(msg.Content, chartType).catch(err => { debug('get chart image err', err) })
-        bufferBlock[msg.Content] = now
-      }
-      bot.uploadImg(`${__dirname}/tmp/${msg.Content}.png`, msg.FromUserName)
-    } else {
+    await directiveRes(msg.Content, msg, bot).catch(async(err) => {
+      debug('get crawler data err', err)
       const res = await tulingBot({
         info: msg.Content,
         loc: `${msg.Member.Province}${msg.Member.City}`,
         userid: msg.Member.UserName
       })
-
       createTextMsg(res)
-      // console.dir(res, { depth: null })
-      bot.sendText(msg.FromUserName, `${res.data.content}`)
+      bot.sendText(msg.FromUserName, res.data.content)
       debug(`图灵自动回复：${res.data.content}`)
-    }
+    })
   })
 
   bot.on('group', async msg => {
-    async function directiveRes(content) {
-      const chartType = checkDirective(content)
-      if (chartType) {
-        const now = new Date()
-        if (!bufferBlock[content] || now - bufferBlock[content] > 600000 || !fs.existsSync(`${__dirname}/tmp/${content}.png`)) {
-          await getChartData(content, chartType).catch(err => { debug('get chart image err', err) })
-          bufferBlock[content] = now
-        }
-        bot.uploadImg(`${__dirname}/tmp/${content}.png`, msg.FromUserName)
-      } else {
-        throw 'invalid directive'
-        debug('invalid directive')
-      }
-    }
-
-    // debug(msg, bot)
     if (msg.Content.startsWith(`@${bot.my.NickName}`) || msg.Content.startsWith('@小秘书')) {
       const content = msg.Content.replace(`@${bot.my.NickName}`, '').replace('@小秘书', '').trim()
       debug('prune content is: ', content)
-      await directiveRes(content).catch(async() => {
+
+      await directiveRes(content, msg, bot).catch(async() => {
         const res = await tulingBot({
           info: content,
           loc: `${msg.GroupMember.Province}${msg.GroupMember.City}`,
@@ -87,20 +94,16 @@ module.exports = function(bot) {
         })
 
         createTextMsg(res)
-        // console.dir(res, { depth: null })
         bot.sendText(msg.FromUserName, `@${msg.GroupMember.NickName} ${res.data.content}`)
         debug(`图灵自动回复：${res.data.content}`)
       })
-      // // console.dir(res, { depth: null })
-      // createTextMsg(res)
-      // bot.sendText(msg.FromUserName, `@${msg.GroupMember.NickName} ${res.data.content}`)
-      // debug(`图灵自动回复：${res.data.content}`)
     } else if (msg.Content.includes(bot.my.NickName)) {
       bot.sendText(msg.FromUserName, `@${msg.GroupMember.NickName} 你在说我吗？`)
     } else if (msg.Content.startsWith('@all')) {
       bot.sendText(msg.FromUserName, '你其实可以单独@我！')
     } else {
-      directiveRes(msg.Content.trim()).catch(() => {
+      directiveRes(msg.Content.trim(), msg, bot).catch((err) => {
+        debug('err', err)
         debug('忽略此条消息', msg.Content)
       })
     }

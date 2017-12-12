@@ -1,111 +1,10 @@
 const moment = require('moment')
 
-const bitcoinMap = {
-  eth: 'ethereum',
-  btc: 'bitcoin',
-  bch: 'bitcoin-cash',
-  iota: 'iota',
-  xrp: 'ripple',
-  ltc: 'litecoin',
-  dash: 'dash',
-  btg: 'bitcoin-gold',
-  xmr: 'monero',
-  xem: 'nem',
-  ada: 'cardano',
-  etc: 'ethereum-classic',
-  xlm: 'stellar',
-  neo: 'neo',
-  eos: 'eos',
-  bcc: 'bitconnect',
-  ppt: 'populous',
-  lsk: 'lisk',
-  stratis: 'stratis',
-  zec: 'zcash',
-  qtum: 'qtum',
-  omg: 'omisego',
-  waves: 'waves',
-  mage: 'magiccoin',
-  usdt: 'tether',
-  mona: 'monacoin',
-  hsr: 'hshare',
-  nxt: 'nxt',
-  ardr: 'ardor',
-  bts: 'bitshares',
-  bcn: 'bytecoin-bcn',
-  xuc: 'exchange-union',
-  emc2: 'einsteinium',
-  steem: 'steem',
-  salt: 'salt',
-  ark: 'ark',
-  vtc: 'vertcoin',
-  vrei: 'veritaseum',
-  kmd: 'komodo',
-  dcr: 'decred',
-  rep: 'augur',
-  doge: 'dogecoin',
-  trx: 'tron',
-  gnt: 'golem-network-tokens',
-  pivx: 'pivx',
-  sc: 'siacoin',
-  qash: 'qash',
-  bnb: 'binance-coin',
-  maid: 'maidsafecoin',
-  pay: 'tenx',
-  wtc: 'walton',
-  power: 'power-ledger',
-  snt: 'status',
-  dgd: 'digixdao',
-  etn: 'electroneum',
-  frst: 'firstcoin',
-  btcd: 'bitcoindark',
-  ink: 'ink',
-  fct: 'factom',
-  gbyte: 'byteball',
-  sys: 'syscoin',
-  bat: 'basic-attention-token',
-  knc: 'kyber-network',
-  rdn: 'raiden-network-token',
-  cnx: 'cryptonex',
-  san: 'santiment',
-  hyp: 'hyperpay',
-  btm: 'bytom',
-  gas: 'gas',
-  xzc: 'zcoin',
-  mco: 'monaco',
-  icn: 'iconomi',
-  ven: 'vechain',
-  ae: 'aeternity',
-  dgb: 'digibyte',
-  pura: 'pura',
-  rec: 'regalcoin',
-  run: 'funfair',
-  gno: 'gnosis',
-  game: 'gamecredits',
-  zrx: '0x',
-  xvg: 'verge',
-  mana: 'decentraland',
-  block: 'blocknet',
-  dgrn: 'dragonchain',
-  bnt: 'bancor',
-  cvc: 'civic',
-  cmt: 'cybermiles',
-  mtl: 'metal',
-  storj: 'storj',
-  bqx: 'bitquence',
-  aion: 'aion',
-  nav: 'nav-coin',
-  xrb: 'raiblocks',
-  nxs: 'nexus',
-  gxs: 'gxshares',
-  edg: 'edgeless',
-  data: 'streamr',
-  sky: 'skycoin',
-  etp: 'metaverse',
-  yoyow: 'yoyow',
-  oct: 'oraclechain'
-}
+const bitcoinMap = require('./coincode-map.js')
 
-const CHART_TYPE = { SUMMARY: 1, DETAIL: 2 }
+exports.bitcoinMap = bitcoinMap
+
+const CHART_TYPE = { SUMMARY: 1, DETAIL: 2, BASEINFO: 3, SUMMARY_TEXT: 4 }
 exports.CHART_TYPE = CHART_TYPE
 
 exports.checkDirective = function(directive) {
@@ -117,6 +16,14 @@ exports.checkDirective = function(directive) {
     return null
   } else if (bitcoinMap[directive.trim().toLowerCase()]) {
     return CHART_TYPE.SUMMARY
+  } else {
+    const d = directive.trim().toLowerCase()
+    if (d.slice(-1) === '?' && bitcoinMap[d.slice(0, -1)]) {
+      return CHART_TYPE.BASEINFO
+    } else if (d.slice(-1) === '!' && bitcoinMap[d.slice(0, -1)]) {
+      return CHART_TYPE.SUMMARY_TEXT
+    }
+    return null
   }
   return null
 }

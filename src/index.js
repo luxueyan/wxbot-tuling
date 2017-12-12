@@ -6,7 +6,7 @@ const download = require('./download')
 const imgcat = require('imgcat')
 const debug = require('debug')('weixinbot')
 const tulingHandle = require('./tuling-handle.js')
-const feixiaohaoHandle = require('./feixiao-handle.js')
+const feixiaohaoHandle = require('./feixiaohao-handle.js')
 
 bot.on('qrcode', (qrcodeUrl) => {
   debug(qrcodeUrl)

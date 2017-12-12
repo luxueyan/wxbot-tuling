@@ -1,31 +1,43 @@
 const webshot = require('webshot')
-const { getSummaryPath } = require('./bitcoin-map.js')
+const debug = require('debug')('weixinbot')
+const { getSummaryPath } = require('./directive-helper.js')
 
 const options = {
+  defaultWhiteBackground: true,
   screenSize: {
-    width: 1277,
+    width: 400,
     height: 1000
   },
   shotSize: {
-    width: 1200,
-    height: 366
+    width: 400,
+    height: 380
   },
   shotOffset: {
-    left: 38.5,
-    top: 230
+    left: 0,
+    top: 0
   },
   userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36'
 }
 
+const bufferBlock = {}
+
 exports.getWebshot = function(directive) {
   const path = getSummaryPath(directive)
   return new Promise((resolve, reject) => {
-    webshot(`http://www.feixiaohao.com/currencies/${path}/`, `${__dirname}/tmp/${directive}.png`, options, function(err) {
-      if (err) {
-        console.log('webshot save err', err)
-        reject(err)
-      }
-      resolve()
-    })
+    const now = new Date()
+    debug('bufferBlock', bufferBlock)
+    const filepath = `${__dirname}/tmp/${directive}.png`
+    if (!bufferBlock[directive] || now - bufferBlock[directive] > 600000 || !fs.existsSync(filepath)) {
+      webshot(`http://m.feixiaohao.com/currencies/${path}/`, filepath, options, function(err) {
+        if (err) {
+          debug('webshot save err', err)
+          reject(err)
+        }
+        bufferBlock[directive] = filepath
+        resolve(filepath)
+      })
+    } else {
+      resove(filepath)
+    }
   })
 }
