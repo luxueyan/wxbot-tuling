@@ -5,8 +5,8 @@ const logger = require('./logger')
 const download = require('./download')
 const imgcat = require('imgcat')
 const debug = require('debug')('weixinbot')
-const tulingHandle = require('./tuling-handle.js')
-const feixiaohaoHandle = require('./feixiaohao-handle.js')
+const chongdingHandle = require('./chongding-handle.js')
+// const feixiaohaoHandle = require('./feixiaohao-handle.js')
 
 bot.on('qrcode', (qrcodeUrl) => {
   debug(qrcodeUrl)
@@ -15,7 +15,7 @@ bot.on('qrcode', (qrcodeUrl) => {
     logger(image)
   }).catch(err => {
     const qrcodeLocal = '/tmp/qrcode.png'
-    logger.warn(`微信二维码获取失败: ${error}, 保存本地后重试`)
+    logger.warn(`微信二维码获取失败: ${err}, 保存本地后重试`)
     download(qrcodeUrl, qrcodeLocal, function() {
       logger('二维码保存成功')
       exec(`open ${qrcodeLocal}`, (error, stdout, stderr) => {
@@ -27,4 +27,4 @@ bot.on('qrcode', (qrcodeUrl) => {
   })
 })
 
-feixiaohaoHandle(bot)
+chongdingHandle(bot)
